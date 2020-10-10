@@ -2,3 +2,8 @@ Thumbs.db
 .DS_Store
 .vscode
 src/main
+
+
+#Added by cargo
+
+/target
