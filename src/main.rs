@@ -7,26 +7,17 @@ use std::net::TcpStream;
 
 fn main() {
 
-	let path = std::env::current_dir();
-	match path {
-		Ok(result) => println!("Current dir: {}", result.display()),
-		Err(err) => println!("{}", err)
-	}
+	// TODO handle SIGINT, SIGTERM, etc.
 
 	println!("Starting go server on port 80");
-	let listener = TcpListener::bind("0.0.0.0:80").unwrap();
+	let listener = TcpListener::bind("0.0.0.0:80");
 
-	for stream in listener.incoming() {
-		// TODO need to put this outside main to be able to use ? and become cleaner
-		match stream {
-			Ok(result) => {
-				match handle_connection(result) {
-					Err(err) => println!("{}", err),
-					_ => ()
-				}
-			},
-			Err(err) => println!("{}", err),
-		}
+	match listener {
+		Ok(result) => {
+			// TODO match here too
+			listen_incoming_connections(result);
+		},
+		Err(err) => println!("{}", err)
 	}
 
 }
@@ -47,10 +38,20 @@ enum HttpVersion {
 }
 */
 
+fn listen_incoming_connections(listener:std::net::TcpListener) -> Result<(), std::io::Error> {
+
+	for stream in listener.incoming() {
+		handle_connection(stream?)?;
+	}
+
+	Ok(())
+
+}
+
 fn handle_connection(mut stream: TcpStream) -> Result<usize, std::io::Error> {
 
 	let mut buffer = [0; 1024];
-	let buffer_result = stream.read(&mut buffer)?;
+	let buffer_result = stream.read(&mut buffer)?; // TODO implement timeouts
 
 	// formato das requisições
 	// https://www.w3.org/Protocols/rfc2616/rfc2616-sec5.html
@@ -99,6 +100,7 @@ fn handle_options(buffer:[u8; 1024], mut stream: TcpStream) -> Result<(), std::i
 
 	let response = format!("{}\r\n{}", status_line, headers);
 
+	// TODO implement timeouts
 	stream.write(response.as_bytes())?;
 	stream.flush()?;
 
@@ -108,15 +110,13 @@ fn handle_options(buffer:[u8; 1024], mut stream: TcpStream) -> Result<(), std::i
 
 fn handle_get(buffer:[u8; 1024], mut stream: TcpStream) -> Result<(), std::io::Error> {
 
-	// TODO
-
 	let (status_line, mut headers, filename) = (
 		"HTTP/1.1 200 OK",
 		"content-type: application/json".to_string(),
 		"hello.json"
 	);
 
-	let body = fs::read_to_string(filename).unwrap();
+	let body = fs::read_to_string(filename)?;
 
 	headers = [
 		headers,
@@ -127,6 +127,7 @@ fn handle_get(buffer:[u8; 1024], mut stream: TcpStream) -> Result<(), std::io::E
 
 	let response = format!("{}\r\n{}\r\n\r\n{}", status_line, headers, body);
 
+	// TODO implement timeouts
 	stream.write(response.as_bytes())?;
 	stream.flush()?;
 
