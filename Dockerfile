@@ -1,15 +1,12 @@
 # https://hub.docker.com/_/rust
 FROM rust:alpine as builder
-
 LABEL maintainer = "Marco Luglio <marcodejulho@gmail.com>"
-COPY . /usr/src/main/
 
-#RUN ls /usr/src/main
+COPY . /usr/src/main/
 
 #default image workdir is /usr/src/myapp
 WORKDIR /usr/src/main/
 #RUN cargo install --path . \
-#	&& cargo build
 RUN cargo build --release --verbose
 
 ###############################################
@@ -21,6 +18,8 @@ COPY --from=builder /usr/src/main/target/release/container_azure_rust /bin/main
 COPY --from=builder /usr/src/main/hello.json /bin/hello.json
 COPY --from=builder /usr/src/main/404.html /bin/404.html
 
+# user execute /bin/main
+# user read /bin/hello.json and /bin/404.html
 RUN chmod u+x /bin/main \
 	&& chmod u+r /bin/hello.json \
 	&& chmod u+r /bin/404.html
