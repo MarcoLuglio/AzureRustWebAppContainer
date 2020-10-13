@@ -10,7 +10,7 @@ fn main() {
 	// TODO handle SIGINT, SIGTERM, etc.
 
 	println!("Starting go server on port 80");
-	let listener = TcpListener::bind("0.0.0.0:80");
+	let listener = TcpListener::bind("0.0.0.0:80"); // containers must use 0.0.0.0! localhost or 127.0.0.1 do not work!
 
 	match listener {
 		Ok(result) => {
@@ -21,22 +21,6 @@ fn main() {
 	}
 
 }
-
-/*
-enum HttpMethod {
-	Options,
-	Get,
-	Post,
-	Put,
-	Delete
-}
-
-enum HttpVersion {
-	Undefined,
-	11,
-	2
-}
-*/
 
 fn listen_incoming_connections(listener:std::net::TcpListener) -> Result<(), std::io::Error> {
 
@@ -59,10 +43,6 @@ fn handle_connection(mut stream: TcpStream) -> Result<usize, std::io::Error> {
 	// methods and root uri
 	let options = b"OPTIONS / ";
 	let get = b"GET / ";
-
-	// let http_method = HttpMethod::Get;
-	// let uri = "";
-	// let http_version = HttpVersion::11;
 
 	if buffer.starts_with(options) {
 		handle_options(buffer, stream)?;
