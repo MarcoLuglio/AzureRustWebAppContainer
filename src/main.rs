@@ -7,11 +7,26 @@ use std::net::TcpStream;
 
 fn main() {
 
+	let path = std::env::current_dir();
+	match path {
+		Ok(result) => println!("Current dir: {}", result.display()),
+		Err(err) => println!("{}", err)
+	}
+
+	println!("Starting go server on port 80");
 	let listener = TcpListener::bind("0.0.0.0:80").unwrap();
 
 	for stream in listener.incoming() {
-		let stream = stream.unwrap();
-		handle_connection(stream);
+		// TODO need to put this outside main to be able to use ? and become cleaner
+		match stream {
+			Ok(result) => {
+				match handle_connection(result) {
+					Err(err) => println!("{}", err),
+					_ => ()
+				}
+			},
+			Err(err) => println!("{}", err),
+		}
 	}
 
 }
@@ -32,10 +47,10 @@ enum HttpVersion {
 }
 */
 
-fn handle_connection(mut stream: TcpStream) {
+fn handle_connection(mut stream: TcpStream) -> Result<usize, std::io::Error> {
 
 	let mut buffer = [0; 1024];
-	stream.read(&mut buffer).unwrap();
+	let buffer_result = stream.read(&mut buffer)?;
 
 	// formato das requisições
 	// https://www.w3.org/Protocols/rfc2616/rfc2616-sec5.html
@@ -49,12 +64,12 @@ fn handle_connection(mut stream: TcpStream) {
 	// let http_version = HttpVersion::11;
 
 	if buffer.starts_with(options) {
-		handle_options(buffer, stream);
+		handle_options(buffer, stream)?;
 	} else if buffer.starts_with(get) {
-		handle_get(buffer, stream);
+		handle_get(buffer, stream)?;
 	} else {
 
-		print!("TODO 404")
+		println!("TODO 404")
 		/*(
 			"HTTP/1.1 404 NOT FOUND",
 			"content-type: text/html".to_string(),
@@ -63,12 +78,14 @@ fn handle_connection(mut stream: TcpStream) {
 
 	};
 
+	Ok(buffer_result)
+
 }
 
 // formato das respostas
 // https://www.w3.org/Protocols/rfc2616/rfc2616-sec6.html
 
-fn handle_options(buffer:[u8; 1024], mut stream: TcpStream) {
+fn handle_options(buffer:[u8; 1024], mut stream: TcpStream) -> Result<(), std::io::Error> {
 
 	let (status_line, headers) = (
 		"HTTP/1.1 200 OK",
@@ -82,12 +99,14 @@ fn handle_options(buffer:[u8; 1024], mut stream: TcpStream) {
 
 	let response = format!("{}\r\n{}", status_line, headers);
 
-	stream.write(response.as_bytes()).unwrap();
-	stream.flush().unwrap();
+	stream.write(response.as_bytes())?;
+	stream.flush()?;
+
+	Ok(())
 
 }
 
-fn handle_get(buffer:[u8; 1024], mut stream: TcpStream) {
+fn handle_get(buffer:[u8; 1024], mut stream: TcpStream) -> Result<(), std::io::Error> {
 
 	// TODO
 
@@ -108,7 +127,9 @@ fn handle_get(buffer:[u8; 1024], mut stream: TcpStream) {
 
 	let response = format!("{}\r\n{}\r\n\r\n{}", status_line, headers, body);
 
-	stream.write(response.as_bytes()).unwrap();
-	stream.flush().unwrap();
+	stream.write(response.as_bytes())?;
+	stream.flush()?;
+
+	Ok(())
 
 }
